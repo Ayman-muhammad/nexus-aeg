@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus AEG – Registrar Dashboard</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons (optional) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Custom smooth transitions */
+        .tab-content {
+            transition: opacity 0.2s ease;
+        }
+        .pending-card {
+            border-left-width: 4px;
+            border-left-color: #f59e0b;
+        }
+        .btn-approve {
+            background-color: #10b981;
+            transition: all 0.2s;
+        }
+        .btn-approve:hover {
+            background-color: #059669;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
+        }
+        /* Loading spinner */
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #f59e0b;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 font-sans antialiased">
+
+    <!-- Main container -->
+    <div class="flex min-h-screen">
+        
+        <!-- Sidebar (fixed width) -->
+        <aside class="w-80 bg-gray-900 border-r border-gray-800 p-6 flex flex-col">
+            <div class="mb-8">
+                <h1 class="text-2xl font-bold text-amber-400 flex items-center gap-2">
+                    <i class="fas fa-university"></i> Nexus AEG
+                </h1>
+                <p class="text-sm text-gray-400 mt-1">Autonomous Exam Governance</p>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="space-y-2 flex-1">
+                <button onclick="switchTab('dashboard')" class="tab-link w-full text-left px-4 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition flex items-center gap-3" data-tab="dashboard">
+                    <i class="fas fa-tachometer-alt w-5"></i> Dashboard
+                </button>
+                <button onclick="switchTab('assistant')" class="tab-link w-full text-left px-4 py-3 rounded-lg hover:bg-gray-800 transition flex items-center gap-3" data-tab="assistant">
+                    <i class="fas fa-robot w-5"></i> Assistant
+                </button>
+                <button onclick="switchTab('new')" class="tab-link w-full text-left px-4 py-3 rounded-lg hover:bg-gray-800 transition flex items-center gap-3" data-tab="new">
+                    <i class="fas fa-plus-circle w-5"></i> New Assessment
+                </button>
+                <button onclick="switchTab('crisis')" class="tab-link w-full text-left px-4 py-3 rounded-lg hover:bg-gray-800 transition flex items-center gap-3" data-tab="crisis">
+                    <i class="fas fa-exclamation-triangle w-5"></i> Crisis Mode
+                </button>
+            </nav>
+
+            <!-- Metrics & Upload -->
+            <div class="mt-auto pt-6 border-t border-gray-800">
+                <div class="space-y-3">
+                    <div class="bg-gray-800 p-4 rounded-lg" id="metric-pending">
+                        <p class="text-sm text-gray-400">Pending Decisions</p>
+                        <p class="text-2xl font-semibold">0</p>
+                    </div>
+                    <div class="bg-gray-800 p-4 rounded-lg" id="metric-utilization">
+                        <p class="text-sm text-gray-400">Room Utilization</p>
+                        <p class="text-2xl font-semibold">0%</p>
+                    </div>
+                </div>
+                <label class="mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-amber-600 hover:bg-amber-700 rounded-lg cursor-pointer transition">
+                    <i class="fas fa-upload"></i> Upload Data
+                    <input type="file" id="fileUpload" multiple class="hidden" accept=".csv,.xlsx,.pdf,.docx">
+                </label>
+            </div>
+        </aside>
+
+        <!-- Main content area -->
+        <main class="flex-1 p-8 overflow-auto">
+            <!-- Dashboard Tab -->
+            <div id="tab-dashboard" class="tab-content">
+                <h2 class="text-2xl font-semibold mb-6 flex items-center gap-2">
+                    <i class="fas fa-tachometer-alt text-amber-400"></i> Pending Decisions
+                </h2>
+                <div id="pending-list" class="space-y-4">
+                    <!-- Will be populated by JS -->
+                    <div class="text-center py-12 text-gray-400">Loading decisions...</div>
+                </div>
+
+                <h2 class="text-2xl font-semibold mt-10 mb-6 flex items-center gap-2">
+                    <i class="fas fa-history text-amber-400"></i> Audit Ledger
+                </h2>
+                <div id="audit-list" class="space-y-3">
+                    <div class="text-center py-8 text-gray-400">Loading ledger...</div>
+                </div>
+            </div>
+
+            <!-- Assistant Tab (hidden by default) -->
+            <div id="tab-assistant" class="tab-content hidden">
+                <h2 class="text-2xl font-semibold mb-4 flex items-center gap-2">
+                    <i class="fas fa-robot text-amber-400"></i> AI Assistant
+                </h2>
+                <div class="bg-gray-900 rounded-lg border border-gray-800 h-[600px] flex flex-col">
+                    <div class="p-4 border-b border-gray-800">
+                        <p class="text-sm text-gray-400">Ask about schedules, clash probabilities, or schedule a new exam</p>
+                    </div>
+                    <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4">
+                        <!-- Messages go here -->
+                    </div>
+                    <div class="p-4 border-t border-gray-800">
+                        <div class="flex gap-2">
+                            <input type="text" id="chat-input" placeholder="Ask something..." 
+                                   class="flex-1 bg-gray-800 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            <button onclick="sendChat()" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 rounded-lg transition">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- New Assessment Tab -->
+            <div id="tab-new" class="tab-content hidden">
+                <h2 class="text-2xl font-semibold mb-6 flex items-center gap-2">
+                    <i class="fas fa-plus-circle text-amber-400"></i> Schedule a New Exam
+                </h2>
+                <div class="bg-gray-900 p-6 rounded-lg border border-gray-800 max-w-2xl">
+                    <form id="new-assessment-form" onsubmit="event.preventDefault(); proposeNewAssessment();">
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Unit Code</label>
+                                <input type="text" id="unit-code" placeholder="e.g., BIT101" 
+                                       class="w-full bg-gray-800 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Students</label>
+                                <input type="number" id="student-count" value="50" min="1" max="1000"
+                                       class="w-full bg-gray-800 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Assessment Type</label>
+                                <select id="assessment-type" class="w-full bg-gray-800 rounded-lg px-4 py-2">
+                                    <option>Final</option>
+                                    <option>Lab</option>
+                                    <option>Oral</option>
+                                    <option>Project</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Preferred Room</label>
+                                <select id="preferred-room" class="w-full bg-gray-800 rounded-lg px-4 py-2">
+                                    <option value="">None</option>
+                                    <option value="Lecture">Lecture</option>
+                                    <option value="Lab">Lab</option>
+                                    <option value="Moot">Moot</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium mb-2">Mode</label>
+                            <div class="flex gap-4">
+                                <label class="flex items-center gap-2">
+                                    <input type="radio" name="mode" value="strict" checked class="text-amber-500">
+                                    Strict (keep existing)
+                                </label>
+                                <label class="flex items-center gap-2">
+                                    <input type="radio" name="mode" value="adaptive">
+                                    Adaptive (minimal reshuffle)
+                                </label>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full py-3 bg-amber-600 hover:bg-amber-700 rounded-lg font-medium transition">
+                            Generate Proposal
+                        </button>
+                    </form>
+                    <div id="proposal-result" class="mt-6 hidden">
+                        <!-- Proposal card will appear here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Crisis Mode Tab -->
+            <div id="tab-crisis" class="tab-content hidden">
+                <h2 class="text-2xl font-semibold mb-6 flex items-center gap-2">
+                    <i class="fas fa-exclamation-triangle text-amber-400"></i> Crisis Mode Demo
+                </h2>
+                <div class="bg-gray-900 p-6 rounded-lg border border-gray-800 max-w-2xl">
+                    <p class="mb-4">Simulate a major clash: 500 students in a 100‑seat room. The AI will resolve it instantly.</p>
+                    <button onclick="triggerCrisis()" class="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-medium transition">
+                        💥 Inject Crisis
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // API base URL – adjust if backend runs elsewhere
+        const API_BASE = 'http://localhost:8000/api';
+
+        // Helper for fetch with error handling
+        async function apiFetch(endpoint, options = {}) {
+            const res = await fetch(`${API_BASE}${endpoint}`, options);
+            if (!res.ok) {
+                const err = await res.text();
+                throw new Error(`API error: ${res.status} – ${err}`);
+            }
+            return res.json();
+        }
+
+        // Tab switching
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            document.querySelectorAll('.tab-link').forEach(btn => {
+                btn.classList.remove('bg-gray-800');
+                if (btn.dataset.tab === tabId) btn.classList.add('bg-gray-800');
+            });
+        }
+
+        // Load metrics and update sidebar
+        async function refreshMetrics() {
+            try {
+                const metrics = await apiFetch('/metrics');
+                document.querySelector('#metric-pending p:last-child').textContent = metrics.pending_decisions;
+                document.querySelector('#metric-utilization p:last-child').textContent = metrics.room_utilization + '%';
+            } catch (e) {
+                console.error('Failed to load metrics', e);
+            }
+        }
+
+        // Load pending decisions
+        async function loadPending() {
+            const container = document.getElementById('pending-list');
+            try {
+                const pending = await apiFetch('/pending');
+                if (pending.length === 0) {
+                    container.innerHTML = `<div class="text-center py-12 text-gray-400">No pending decisions. All schedules are optimal.</div>`;
+                    return;
+                }
+                let html = '';
+                pending.forEach((dec, idx) => {
+                    html += `
+                        <div class="bg-gray-900 pending-card rounded-lg p-6 flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <h3 class="text-lg font-semibold">${dec.unit}</h3>
+                                    <span class="text-xs bg-amber-900 text-amber-200 px-2 py-1 rounded-full">${dec.assessment_type}</span>
+                                </div>
+                                <p class="text-gray-300 mb-2">${dec.action}</p>
+                                ${dec.invigilators && dec.invigilators.length ? `<p class="text-sm text-gray-400 mb-2">Invigilators: ${dec.invigilators.join(', ')}</p>` : ''}
+                                ${dec.changes ? `<p class="text-sm text-amber-400 mb-2">This will move ${dec.changes} existing exams.</p>` : ''}
+                                <p class="text-sm text-gray-400 mb-4">${dec.reason}</p>
+                                <p class="text-xs font-mono text-gray-500">Hash: ${dec.integrity_hash}</p>
+                            </div>
+                            <button onclick="approveDecision(${idx})" class="btn-approve px-4 py-2 rounded-lg flex items-center gap-2">
+                                <i class="fas fa-check-circle"></i> Approve
+                            </button>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            } catch (e) {
+                container.innerHTML = `<div class="text-center py-12 text-red-400">Error loading decisions: ${e.message}</div>`;
+            }
+        }
+
+        // Approve decision
+        async function approveDecision(index) {
+            try {
+                await apiFetch(`/approve/${index}`, { method: 'POST' });
+                loadPending();
+                loadAudit();
+                refreshMetrics();
+            } catch (e) {
+                alert('Approval failed: ' + e.message);
+            }
+        }
+
+        // Load audit ledger
+        async function loadAudit() {
+            const container = document.getElementById('audit-list');
+            try {
+                const entries = await apiFetch('/audit');
+                if (entries.length === 0) {
+                    container.innerHTML = `<div class="text-center py-8 text-gray-400">No audit entries yet.</div>`;
+                    return;
+                }
+                let html = '';
+                entries.forEach(entry => {
+                    html += `
+                        <div class="bg-gray-900 p-4 rounded-lg border border-gray-800">
+                            <p class="font-medium">${entry.unit}</p>
+                            <p class="text-sm text-gray-400 mb-2">${entry.action}</p>
+                            <div class="flex justify-between text-xs text-gray-500">
+                                <span>${new Date(entry.timestamp).toLocaleString()}</span>
+                                <span class="font-mono">${entry.integrity_hash.slice(0,12)}...</span>
+                            </div>
+                            ${entry.sms_sent ? `<p class="text-xs text-green-400 mt-2">📱 SMS sent to ${entry.sms_sent} students</p>` : ''}
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            } catch (e) {
+                container.innerHTML = `<div class="text-center py-8 text-red-400">Error loading ledger: ${e.message}</div>`;
+            }
+        }
+
+        // File upload (simplified: we assume user uploads multiple files with specific names)
+        document.getElementById('fileUpload').addEventListener('change', async function(e) {
+            const files = e.target.files;
+            if (!files.length) return;
+            const formData = new FormData();
+            // Map file names to expected field names (backend expects: buildings, units, students, enrollments, assessments, invigilators)
+            // This is a simplified mapping – in reality you'd need proper file assignment or a zip upload.
+            // For demo, we assume user uploads files in a fixed order or we implement a more robust UI.
+            // Let's show an alert that this is a stub.
+            alert('File upload is not fully implemented in this demo. Use the default data or implement proper mapping.');
+        });
+
+        // Assistant chat
+        async function sendChat() {
+            const input = document.getElementById('chat-input');
+            const query = input.value.trim();
+            if (!query) return;
+            const chatDiv = document.getElementById('chat-messages');
+            // Add user message
+            chatDiv.innerHTML += `<div class="flex justify-end"><div class="bg-amber-600 rounded-lg p-3 max-w-[80%]">${escapeHtml(query)}</div></div>`;
+            input.value = '';
+
+            // Show typing indicator
+            const typingId = 'typing-' + Date.now();
+            chatDiv.innerHTML += `<div id="${typingId}" class="flex justify-start"><div class="bg-gray-800 rounded-lg p-3"><div class="flex gap-1"><span class="animate-pulse">●</span><span class="animate-pulse delay-150">●</span><span class="animate-pulse delay-300">●</span></div></div></div>`;
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+
+            try {
+                const res = await apiFetch('/assistant', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+                document.getElementById(typingId)?.remove();
+                chatDiv.innerHTML += `<div class="flex justify-start"><div class="bg-gray-800 rounded-lg p-3 max-w-[80%]">${escapeHtml(res.response)}</div></div>`;
+                chatDiv.scrollTop = chatDiv.scrollHeight;
+            } catch (e) {
+                document.getElementById(typingId)?.remove();
+                chatDiv.innerHTML += `<div class="flex justify-start"><div class="bg-red-900 rounded-lg p-3">Error: ${e.message}</div></div>`;
+            }
+        }
+
+        // Escape HTML to prevent XSS in chat
+        function escapeHtml(unsafe) {
+            return unsafe.replace(/[&<>"]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                if (m === '"') return '&quot;';
+                return m;
+            });
+        }
+
+        // Propose new assessment
+        async function proposeNewAssessment() {
+            const unitCode = document.getElementById('unit-code').value;
+            const studentCount = parseInt(document.getElementById('student-count').value);
+            const assessmentType = document.getElementById('assessment-type').value;
+            const preferredRoom = document.getElementById('preferred-room').value;
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+
+            if (!unitCode) {
+                alert('Please enter a unit code');
+                return;
+            }
+
+            try {
+                const proposal = await apiFetch('/propose', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        unit_code: unitCode.toUpperCase(),
+                        student_count: studentCount,
+                        assessment_type: assessmentType,
+                        preferred_room_type: preferredRoom || null,
+                        mode
+                    })
+                });
+
+                const resultDiv = document.getElementById('proposal-result');
+                resultDiv.innerHTML = `
+                    <div class="bg-gray-800 p-4 rounded-lg mt-4 border border-amber-500">
+                        <p class="font-medium mb-2">${proposal.unit}</p>
+                        <p class="text-sm mb-2">${proposal.action}</p>
+                        ${proposal.invigilators.length ? `<p class="text-xs text-gray-400 mb-2">Invigilators: ${proposal.invigilators.join(', ')}</p>` : ''}
+                        ${proposal.changes ? `<p class="text-xs text-amber-400 mb-2">Will move ${proposal.changes} existing exams.</p>` : ''}
+                        <p class="text-xs text-gray-400 mb-2">${proposal.reason}</p>
+                        <p class="text-xs font-mono text-gray-500">Hash: ${proposal.integrity_hash}</p>
+                        <button onclick="addToPending('${encodeURIComponent(JSON.stringify(proposal))}')" class="mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm">
+                            Add to Pending
+                        </button>
+                    </div>
+                `;
+                resultDiv.classList.remove('hidden');
+            } catch (e) {
+                alert('Proposal failed: ' + e.message);
+            }
+        }
+
+        // Add proposal to pending (requires backend to accept it; we'll just reload)
+        function addToPending(proposalStr) {
+            // In a real app, you'd send this proposal to a separate endpoint to add to pending.
+            // For simplicity, we'll just reload pending after a fake add.
+            alert('Proposal added to pending (simulated). In real system, it would appear in the list.');
+            loadPending(); // optimistic
+        }
+
+        // Trigger crisis
+        async function triggerCrisis() {
+            try {
+                await apiFetch('/crisis', { method: 'POST' });
+                alert('Crisis injected! Check pending decisions.');
+                loadPending();
+                refreshMetrics();
+            } catch (e) {
+                alert('Crisis failed: ' + e.message);
+            }
+        }
+
+        // Initial load
+        window.onload = () => {
+            loadPending();
+            loadAudit();
+            refreshMetrics();
+            // Set interval for auto-refresh
+            setInterval(() => {
+                loadPending();
+                loadAudit();
+                refreshMetrics();
+            }, 5000);
+        };
+    </script>
+</body>
+</html>

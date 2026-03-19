@@ -1,0 +1,73 @@
+{
+  "unit_preferences": {
+    "BCM101": {
+      "MKCC": 2
+    },
+    "BCM202": {
+      "Pavilion": 2
+    },
+    "BBM202": {
+      "Pavilion": 1
+    },
+    "BBM303": {
+      "MKCC": 1,
+      "CT001": 1
+    },
+    "BBM101": {
+      "Pavilion": 1
+    },
+    "BCM303": {
+      "MootCourt": 1,
+      "M": 1
+    },
+    "BIT303": {
+      "L": 1
+    }
+  },
+  "slot_congestion": {
+    "Slot2": 3,
+    "Slot3": 4,
+    "Slot1": 2,
+    "o": 1,
+    "a": 1
+  },
+  "historical_clashes": [],
+  "invigilator_assignments": {
+    "Mr. Kiprono": [
+      "BCM101",
+      "BBM303",
+      "BCM101",
+      "BBM303",
+      "BCM303",
+      "BCM303"
+    ],
+    "Dr. Mutua": [
+      "BCM101",
+      "BBM101",
+      "BCM101",
+      "BIT303"
+    ],
+    "Dr. Akinyi": [
+      "BCM202",
+      "BCM202"
+    ],
+    "Prof. Kiptoo": [
+      "BCM202",
+      "BBM202",
+      "BCM202"
+    ],
+    "Prof. Atieno": [
+      "BBM202",
+      "BBM303",
+      "BBM303"
+    ],
+    "Ms. Mwangi": [
+      "BBM101",
+      "BCM303",
+      "BCM303"
+    ],
+    "Dr. Omondi": [
+      "BIT303"
+    ]
+  }
+}

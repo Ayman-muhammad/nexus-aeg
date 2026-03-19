@@ -1,0 +1,8 @@
+unit_code,student_count,current_room,current_slot
+CS101,140,HALL_A,2025-05-10 09:00
+CS201,70,HALL_B,2025-05-10 09:00
+BUS101,45,LAB_1,2025-05-10 09:00          # Overcrowding (LAB_1 cap 40)
+BUS202,50,HALL_B,2025-05-10 09:00          # Double‑booking with CS201
+ENG101,100,HALL_A,2025-05-10 14:00
+CS101,45,LAB_1,2025-05-11 09:00            # Overcrowding (LAB_1 cap 40)
+CS201,80,LAB_2,2025-05-11 09:00
